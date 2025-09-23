@@ -155,6 +155,7 @@ export interface IOrder extends Document {
   paymentStatus:
     | "pending"
     | "processing"
+    | "authorized"
     | "paid"
     | "failed"
     | "refunded"
@@ -174,6 +175,14 @@ export interface IOrder extends Document {
     paymentReference?: string;
     paymentDate?: Date;
     gatewayResponse?: any;
+    amount?: number;
+    currency?: string;
+    method?: string;
+    bank?: string;
+    wallet?: string;
+    vpa?: string;
+    email?: string;
+    contact?: string;
   };
   trackingDetails?: {
     currentStep: string;
@@ -220,6 +229,7 @@ const orderSchema: Schema<IOrder> = new Schema(
       enum: [
         "pending",
         "processing",
+        "authorized",
         "paid",
         "failed",
         "refunded",

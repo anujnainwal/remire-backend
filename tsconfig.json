@@ -8,9 +8,9 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
-    "types": ["node", "express"],
+    "types": ["node", "express"]
     // "ignoreDeprecations": "6.0"
   },
   "include": ["src"],

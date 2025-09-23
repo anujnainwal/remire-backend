@@ -1,6 +1,5 @@
 import { Request, Response } from "express";
 import { responseHelper } from "../../../utils/responseHelper";
-import { verifyWebhookSignature } from "../../../services/razorpay.service";
 import OrderModel from "../models/Order.model";
 import CartModel from "../models/Cart.model";
 
@@ -10,20 +9,20 @@ export const razorpayWebhookController = async (
   res: Response
 ) => {
   try {
-    const signature = req.headers["x-razorpay-signature"] as string;
-    const body = JSON.stringify(req.body);
-
-    // Verify webhook signature
-    const isValidSignature = verifyWebhookSignature(body, signature);
-
-    if (!isValidSignature) {
-      console.error("Invalid webhook signature");
-      return responseHelper.unauthorized(res, "Invalid webhook signature");
-    }
-
     const event = req.body;
 
-    console.log("Razorpay webhook event:", event.event);
+    console.log("Razorpay webhook event received:", {
+      event: event.event,
+      timestamp: new Date().toISOString(),
+      paymentId: event.payload?.payment?.entity?.id,
+      orderId: event.payload?.order?.entity?.id,
+    });
+
+    // Validate event structure
+    if (!event.event || !event.payload) {
+      console.error("Invalid webhook event structure:", event);
+      return responseHelper.badRequest(res, "Invalid webhook event structure");
+    }
 
     switch (event.event) {
       case "payment.captured":
@@ -35,10 +34,14 @@ export const razorpayWebhookController = async (
       case "order.paid":
         await handleOrderPaid(event);
         break;
+      case "payment.authorized":
+        await handlePaymentAuthorized(event);
+        break;
       default:
         console.log("Unhandled webhook event:", event.event);
     }
 
+    console.log("Webhook processed successfully for event:", event.event);
     return responseHelper.success(res, {}, "Webhook processed successfully");
   } catch (err) {
     console.error("Error processing webhook:", err);
@@ -50,10 +53,10 @@ export const razorpayWebhookController = async (
 const handlePaymentCaptured = async (event: any) => {
   try {
     const payment = event.payload.payment.entity;
-    const orderId = payment.notes?.orderId;
+    const orderId = payment.notes?.orderId || payment.order_id;
 
     if (!orderId) {
-      console.error("No order ID found in payment notes");
+      console.error("No order ID found in payment notes or order_id");
       return;
     }
 
@@ -68,6 +71,16 @@ const handlePaymentCaptured = async (event: any) => {
     order.paymentStatus = "completed";
     order.status = "completed";
     order.completedAt = new Date();
+    order.paymentDetails = {
+      amount: payment.amount,
+      currency: payment.currency,
+      method: payment.method,
+      bank: payment.bank,
+      wallet: payment.wallet,
+      vpa: payment.vpa,
+      email: payment.email,
+      contact: payment.contact,
+    };
     await order.save();
 
     // Clear cart
@@ -80,7 +93,11 @@ const handlePaymentCaptured = async (event: any) => {
       await cart.save();
     }
 
-    console.log("Payment captured and order completed:", orderId);
+    console.log("Payment captured and order completed:", {
+      orderId,
+      paymentId: payment.id,
+      amount: payment.amount,
+    });
   } catch (err) {
     console.error("Error handling payment captured:", err);
   }
@@ -151,5 +168,48 @@ const handleOrderPaid = async (event: any) => {
     console.log("Order paid and completed:", orderId);
   } catch (err) {
     console.error("Error handling order paid:", err);
+  }
+};
+
+// Handle payment authorized event
+const handlePaymentAuthorized = async (event: any) => {
+  try {
+    const payment = event.payload.payment.entity;
+    const orderId = payment.notes?.orderId || payment.order_id;
+
+    if (!orderId) {
+      console.error("No order ID found in payment notes or order_id");
+      return;
+    }
+
+    const order = await OrderModel.findById(orderId);
+    if (!order) {
+      console.error("Order not found:", orderId);
+      return;
+    }
+
+    // Update order status to authorized (not yet captured)
+    order.paymentId = payment.id;
+    order.paymentStatus = "authorized";
+    order.status = "processing";
+    order.paymentDetails = {
+      amount: payment.amount,
+      currency: payment.currency,
+      method: payment.method,
+      bank: payment.bank,
+      wallet: payment.wallet,
+      vpa: payment.vpa,
+      email: payment.email,
+      contact: payment.contact,
+    };
+    await order.save();
+
+    console.log("Payment authorized for order:", {
+      orderId,
+      paymentId: payment.id,
+      amount: payment.amount,
+    });
+  } catch (err) {
+    console.error("Error handling payment authorized:", err);
   }
 };

@@ -105,7 +105,7 @@ export const getOrder = async (req: AuthRequest, res: Response) => {
     const order = await OrderModel.findOne({
       _id: id,
       user: userId,
-    }).populate("user", "email firstName lastName");
+    }).populate("user", "email firstname lastname");
 
     if (!order) {
       return responseHelper.notFound(res, "Order not found");
@@ -295,4 +295,3 @@ export const getOrderAnalytics = async (req: AuthRequest, res: Response) => {
     return responseHelper.serverError(res, "Failed to fetch order analytics");
   }
 };
-

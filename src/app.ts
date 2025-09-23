@@ -13,6 +13,7 @@ import educationLoanRouter from "./modules/forex-services/routes/educationLoan.r
 import orderRouter from "./modules/forex-services/routes/order.routes";
 import cartRouter from "./modules/forex-services/routes/cart.routes";
 import paymentRouter from "./modules/forex-services/routes/payment.routes";
+import webhookRouter from "./modules/forex-services/routes/webhook.routes";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import { corsOption } from "./config/corsOptions";
@@ -70,6 +71,7 @@ app.use("/api/v1/forex", educationLoanRouter);
 app.use("/api/v1/forex", orderRouter);
 app.use("/api/v1/forex", cartRouter);
 app.use("/api/v1/forex", paymentRouter);
+app.use("/api/v1", webhookRouter);
 
 // 404 not found - register a catch-all handler without a string path
 // to avoid path-to-regexp parsing issues (some versions treat '/*' as an invalid token).
