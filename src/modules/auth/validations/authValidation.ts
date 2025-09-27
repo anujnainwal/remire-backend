@@ -23,7 +23,7 @@ export const registerSchema = z.object({
 
 // User login validation
 export const loginSchema = z.object({
-  email: z.string().email("Invalid email address"),
+  email: z.string().email("Invalid email address").lowercase().trim(),
   password: z.string().min(6, "Password must be at least 6 characters"),
   deviceId: z.string().uuid().optional(),
   deviceType: z.enum(["ios", "android", "web"]).optional(),
