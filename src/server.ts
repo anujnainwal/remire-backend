@@ -1,6 +1,7 @@
 import dotenv from "dotenv";
 import app from "./app";
 import { connectToDB } from "./config/connectToDB";
+import { autoSeedSuperAdmin } from "./config/autoSeed";
 import socket from "socket.io";
 import { createServer } from "http";
 import jwt from "jsonwebtoken";
@@ -13,7 +14,21 @@ const ENV = process.env.NODE_ENV || "development";
 
 const httpServer = createServer(app);
 
-connectToDB();
+// Connect to database and run auto-seed
+async function startServer() {
+  try {
+    await connectToDB();
+    console.log("✅ Database connected successfully");
+
+    // Run auto-seed for super admin
+    await autoSeedSuperAdmin();
+  } catch (error) {
+    console.error("❌ Failed to start server:", error);
+    process.exit(1);
+  }
+}
+
+startServer();
 
 //socket implementation
 const io = new socket.Server(httpServer, {

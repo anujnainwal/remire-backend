@@ -4,6 +4,9 @@ import logger from "./config/logger";
 import { responseHelper } from "./utils/responseHelper";
 import authRouter from "./modules/auth/routes/auth.routes";
 import usersRouter from "./modules/users/routes/users.routes";
+import staffAuthRouter from "./modules/admin/routes/staffAuth.routes";
+import rolePermissionRouter from "./modules/admin/routes/rolePermission.routes";
+import staffAccessLevelRouter from "./modules/admin/routes/staffAccessLevel.routes";
 import sendMoneyRouter from "./modules/forex-services/routes/sendMoney.routes";
 import nriRepatriationRouter from "./modules/forex-services/routes/nriRepatriation.routes";
 import germanBlockedAccountRouter from "./modules/forex-services/routes/germanBlockedAccount.routes";
@@ -17,6 +20,7 @@ import webhookRouter from "./modules/forex-services/routes/webhook.routes";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import { corsOption } from "./config/corsOptions";
+import { autoSeedSuperAdmin } from "./config/autoSeed";
 
 const app = express();
 
@@ -61,6 +65,12 @@ app.get("/health-check", async (req: Request, res: Response) => {
 app.use("/api/v1/auth", authRouter);
 // Users Routes
 app.use("/api/v1/users", usersRouter);
+// Staff Authentication Routes
+app.use("/api/v1/staff", staffAuthRouter);
+// Role and Permission Management Routes
+app.use("/api/v1/admin", rolePermissionRouter);
+// Staff Access Level Management Routes (Super Admin Only)
+app.use("/api/v1/admin/access", staffAccessLevelRouter);
 // Forex Services Routes
 app.use("/api/v1/forex", sendMoneyRouter);
 app.use("/api/v1/forex", nriRepatriationRouter);

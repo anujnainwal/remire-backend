@@ -16,6 +16,12 @@ export interface IUser extends Document {
   providerId?: string; // social login ID
   profilePicture?: string;
   isVerified: boolean;
+  isActive: boolean; // Account status
+  isBlocked: boolean; // Blocked status
+  blockedReason?: string; // Reason for blocking
+  blockedAt?: Date; // When account was blocked
+  blockedBy?: mongoose.Types.ObjectId; // Who blocked the account
+  lastLogin?: Date; // Last login date
   resetPasswordToken?: String;
   resetPasswordTokenExpire?: Date;
   address?: string;
@@ -28,7 +34,8 @@ export interface IUser extends Document {
     coordinates: [number, number]; // [lng, lat]
   };
   timezone?: string;
-
+  kycStatus: "pending" | "approved" | "rejected" | "not_required"; // KYC status
+  kycDocuments?: string[]; // Array of document URLs
   acceptLegal: boolean;
 
   comparePassword(password: string): Promise<boolean>;
@@ -49,6 +56,12 @@ const userSchema: Schema<IUser> = new Schema(
     providerId: { type: String, default: null },
     profilePicture: { type: String, default: null },
     isVerified: { type: Boolean, default: false },
+    isActive: { type: Boolean, default: true },
+    isBlocked: { type: Boolean, default: false },
+    blockedReason: { type: String, default: null },
+    blockedAt: { type: Date, default: null },
+    blockedBy: { type: Schema.Types.ObjectId, ref: "Staff", default: null },
+    lastLogin: { type: Date, default: null },
     resetPasswordToken: String,
     resetPasswordTokenExpire: Date,
     // Optional contact fields
@@ -70,6 +83,12 @@ const userSchema: Schema<IUser> = new Schema(
       coordinates: { type: [Number], default: [0, 0] }, // [lng, lat]
     },
     timezone: { type: String, default: null },
+    kycStatus: {
+      type: String,
+      enum: ["pending", "approved", "rejected", "not_required"],
+      default: "not_required",
+    },
+    kycDocuments: [{ type: String }],
     // User must agree to terms and conditions
     acceptLegal: { type: Boolean, required: true },
   },

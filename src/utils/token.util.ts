@@ -6,6 +6,7 @@ export interface JwtPayload {
   userId: string | null | any;
   email?: string;
   role?: string;
+  type?: string;
 }
 
 interface TokenOptions {

@@ -18,7 +18,8 @@
     "dev": "nodemon",
     "build": "tsc",
     "start": "node dist/server.js",
-    "test": "vitest --run"
+    "test": "vitest --run",
+    "seed:super-admin": "ts-node scripts/seedSuperAdmin.ts"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
