@@ -6,7 +6,9 @@
       "src": "api/serverless.ts",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": ["src/**", "package.json", "tsconfig.json"]
+        "includeFiles": ["src/**", "package.json", "tsconfig.json"],
+        "maxDuration": 30,
+        "runtime": "nodejs18.x"
       }
     }
   ],
@@ -18,11 +20,5 @@
   ],
   "env": {
     "NODE_ENV": "production"
-  },
-  "functions": {
-    "api/serverless.ts": {
-      "maxDuration": 30,
-      "runtime": "nodejs18.x"
-    }
   }
 }
