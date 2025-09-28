@@ -15,9 +15,40 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.log('✅ Database connected successfully in serverless function');
     }
 
-    // Set CORS headers for Vercel
+    // Get the origin from the request
+    const origin = req.headers.origin;
+    const allowedOrigins = [
+      'http://localhost:3000',
+      'http://localhost:5000',
+      'http://localhost:9002',
+      'http://127.0.0.1:3000',
+      'http://127.0.0.1:5000',
+      'http://127.0.0.1:9002',
+      'https://remiwire.vercel.app',
+      'https://remire-frontend.vercel.app'
+    ];
+
+    // Debug logging
+    console.log('🌐 CORS Debug:', {
+      origin,
+      method: req.method,
+      url: req.url,
+      isAllowed: origin && allowedOrigins.includes(origin)
+    });
+
+    // Set CORS headers for Vercel with specific origin
     res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    
+    // Only set origin if it's in the allowed list
+    if (origin && allowedOrigins.includes(origin)) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      console.log('✅ CORS: Origin allowed:', origin);
+    } else {
+      // Fallback to a default allowed origin for development
+      res.setHeader('Access-Control-Allow-Origin', 'https://remire-frontend.vercel.app');
+      console.log('⚠️ CORS: Using fallback origin, requested origin:', origin);
+    }
+    
     res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
     res.setHeader(
       'Access-Control-Allow-Headers',
