@@ -19,7 +19,9 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "test": "vitest --run",
-    "seed:super-admin": "ts-node scripts/seedSuperAdmin.ts"
+    "seed:super-admin": "ts-node scripts/seedSuperAdmin.ts",
+    "vercel-build": "npm run build",
+    "vercel-dev": "npm run dev"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
@@ -31,8 +33,8 @@
     "@types/morgan": "^1.9.10",
     "@types/node": "^24.3.0",
     "@types/nodemailer": "^7.0.1",
-    "@types/socket.io": "^3.0.1",
     "@types/supertest": "^6.0.3",
+    "@vercel/node": "^5.3.24",
     "nodemon": "^3.1.10",
     "supertest": "^7.1.4",
     "ts-node": "^10.9.2",
