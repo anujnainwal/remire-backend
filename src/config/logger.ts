@@ -6,17 +6,10 @@ const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL
 let logger: pino.Logger;
 
 if (isProduction) {
-  // Production/Serverless - console logging only, no file operations
+  // Production/Serverless - simple console logging, no transport
   logger = pino({
     level: process.env.LOG_LEVEL || "info",
-    transport: {
-      target: "pino-pretty",
-      options: { 
-        colorize: false,
-        translateTime: "SYS:standard",
-        ignore: "pid,hostname"
-      },
-    },
+    // No transport in production - use default JSON output
   });
 } else {
   // Development - use file logging
