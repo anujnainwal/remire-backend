@@ -1,0 +1,39 @@
+{
+  "version": 2,
+  "name": "remiwire-backend-api",
+  "builds": [
+    {
+      "src": "api/server.ts",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": ["src/**", "package.json", "tsconfig.json"],
+        "zeroConfig": false
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "api/server.ts"
+    }
+  ],
+  "env": {
+    "NODE_ENV": "production",
+    "MONGODB_URI_PROD": "@mongodb_uri_prod",
+    "JWT_SECRET": "@jwt_secret",
+    "JWT_REFRESH_SECRET": "@jwt_refresh_secret",
+    "COOKIE_SECRET": "@cookie_secret"
+  },
+  "functions": {
+    "api/server.ts": {
+      "maxDuration": 30,
+      "runtime": "nodejs18.x"
+    }
+  },
+  "regions": ["iad1"],
+  "framework": null,
+  "installCommand": "npm install",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "devCommand": "npm run dev"
+}

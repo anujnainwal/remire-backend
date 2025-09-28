@@ -22,8 +22,8 @@ export const validateRequest = (schema: ZodSchema) => {
       next();
     } catch (error) {
       if (error instanceof ZodError) {
-        const errorMessage = error.errors
-          .map((err) => `${err.path.join(".")}: ${err.message}`)
+        const errorMessage = error.issues
+          .map((err: any) => `${err.path.join(".")}: ${err.message}`)
           .join(", ");
 
         return responseHelper.validationError(res, errorMessage);

@@ -7,6 +7,7 @@ import usersRouter from "./modules/users/routes/users.routes";
 import staffAuthRouter from "./modules/admin/routes/staffAuth.routes";
 import rolePermissionRouter from "./modules/admin/routes/rolePermission.routes";
 import staffAccessLevelRouter from "./modules/admin/routes/staffAccessLevel.routes";
+import dashboardRouter from "./modules/admin/routes/dashboard.routes";
 import sendMoneyRouter from "./modules/forex-services/routes/sendMoney.routes";
 import nriRepatriationRouter from "./modules/forex-services/routes/nriRepatriation.routes";
 import germanBlockedAccountRouter from "./modules/forex-services/routes/germanBlockedAccount.routes";
@@ -71,6 +72,8 @@ app.use("/api/v1/staff", staffAuthRouter);
 app.use("/api/v1/admin", rolePermissionRouter);
 // Staff Access Level Management Routes (Super Admin Only)
 app.use("/api/v1/admin/access", staffAccessLevelRouter);
+// Dashboard Analytics Routes
+app.use("/api/v1/admin/dashboard", dashboardRouter);
 // Forex Services Routes
 app.use("/api/v1/forex", sendMoneyRouter);
 app.use("/api/v1/forex", nriRepatriationRouter);
