@@ -1,15 +1,34 @@
 {
   "version": 2,
+  "name": "remiwire-backend-api",
   "builds": [
     {
-      "src": "src/server.ts",
-      "use": "@vercel/node"
+      "src": "api/serverless.ts",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": ["src/**", "package.json", "tsconfig.json"]
+      }
     }
   ],
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "src/server.ts"
+      "dest": "api/serverless.ts"
     }
-  ]
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  },
+  "functions": {
+    "api/serverless.ts": {
+      "maxDuration": 30,
+      "runtime": "nodejs18.x"
+    }
+  },
+  "regions": ["iad1"],
+  "framework": null,
+  "installCommand": "npm install",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "devCommand": "npm run dev"
 }

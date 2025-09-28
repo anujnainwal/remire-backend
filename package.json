@@ -17,7 +17,7 @@
   "scripts": {
     "dev": "nodemon",
     "build": "tsc",
-    "start": "node dist/server.js",
+    "start": "node dist/src/server.js",
     "test": "vitest --run",
     "seed:super-admin": "ts-node scripts/seedSuperAdmin.ts",
     "vercel-build": "npm run build",
