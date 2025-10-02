@@ -96,6 +96,11 @@ const userSchema: Schema<IUser> = new Schema(
 );
 
 userSchema.pre<IUser>("save", async function (next) {
+  // Set isVerified to true for social login users
+  if (this.authProvider !== "local") {
+    this.isVerified = true;
+  }
+  
   if (!this.isModified("password") || !this.password) return next();
   this.password = await bcrypt.hash(this.password, 10);
   next();

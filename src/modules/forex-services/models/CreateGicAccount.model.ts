@@ -8,8 +8,8 @@ export interface ICreateGicAccount extends Document {
   countryCode: string;
   email: string;
   blockedAccountPreference: string;
-  offerLetter?: string;
-  passportCopy?: string;
+  offerLetter?: string[];
+  passportCopy?: string[];
   status: "pending" | "processing" | "completed" | "cancelled" | "failed";
   assignedAgent?: string;
   notes?: string;
@@ -26,8 +26,26 @@ const createGicAccountSchema: Schema<ICreateGicAccount> = new Schema(
     countryCode: { type: String, required: true, default: "+91" },
     email: { type: String, required: true },
     blockedAccountPreference: { type: String, required: true },
-    offerLetter: { type: String, default: null },
-    passportCopy: { type: String, default: null },
+    offerLetter: [{
+      originalName: {type: String, required: true},
+      fileName: { type: String, required: true },
+      filePath: { type: String, required: true },
+      fileType: { type: String, required: true },
+      fileSize: { type: Number, required: true },
+      fileExtension: { type: String, required: true },
+      fileCreatedAt: { type: Date, required: true },
+      fileUpdatedAt: { type: Date, required: true },
+    }],
+    passportCopy: [{
+      originalName: {type: String, required: true},
+      fileName: { type: String, required: true },
+      filePath: { type: String, required: true },
+      fileType: { type: String, required: true },
+      fileSize: { type: Number, required: true },
+      fileExtension: { type: String, required: true },
+      fileCreatedAt: { type: Date, required: true },
+      fileUpdatedAt: { type: Date, required: true },
+    }],
     status: {
       type: String,
       enum: ["pending", "processing", "completed", "cancelled", "failed"],

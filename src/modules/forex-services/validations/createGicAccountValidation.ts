@@ -9,8 +9,7 @@ export const createGicAccountSchema = z.object({
   blockedAccountPreference: z
     .string()
     .min(1, "Please select a blocked account preference"),
-  offerLetter: z.string().optional(),
-  passportCopy: z.string().optional(),
+  // Files are handled by multer, not in body validation
 });
 
 export default createGicAccountSchema;

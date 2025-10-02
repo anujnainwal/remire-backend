@@ -3,6 +3,8 @@ import CreateGicAccountModel from "../models/CreateGicAccount.model";
 import { responseHelper } from "../../../utils/responseHelper";
 import { AuthRequest } from "../../../middlewares/auth.middleware";
 import createGicAccountValidationSchema from "../validations/createGicAccountValidation";
+import path from "path";
+import fs from "fs";
 
 export const createGicAccountRequest = async (
   req: AuthRequest,
@@ -12,12 +14,37 @@ export const createGicAccountRequest = async (
     const userId = req.user && req.user._id;
     if (!userId) return responseHelper.unauthorized(res);
 
+    // Validate body data (excluding files)
     const body = req.body || {};
     const parsed = createGicAccountValidationSchema.safeParse(body);
     if (!parsed.success) {
       return responseHelper.validationError(
         res,
         parsed.error.issues[0].message
+      );
+    }
+
+    // Check if files are uploaded
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
+    if (!files) {
+      return responseHelper.validationError(
+        res,
+        "No files uploaded"
+      );
+    }
+
+    // Check for required files
+    if (!files.offerLetter || files.offerLetter.length === 0) {
+      return responseHelper.validationError(
+        res,
+        "Offer letter is required"
+      );
+    }
+
+    if (!files.passportCopy || files.passportCopy.length === 0) {
+      return responseHelper.validationError(
+        res,
+        "Passport copy is required"
       );
     }
 
@@ -28,9 +55,33 @@ export const createGicAccountRequest = async (
       countryCode,
       email,
       blockedAccountPreference,
-      offerLetter,
-      passportCopy,
     } = parsed.data;
+
+    // Process offer letter file
+    const offerLetterFile = files.offerLetter[0];
+    const offerLetterData = {
+      originalName: offerLetterFile.originalname,
+      fileName: offerLetterFile.filename,
+      filePath: offerLetterFile.path,
+      fileType: offerLetterFile.mimetype,
+      fileSize: offerLetterFile.size,
+      fileExtension: path.extname(offerLetterFile.originalname),
+      fileCreatedAt: new Date(),
+      fileUpdatedAt: new Date(),
+    };
+
+    // Process passport copy file
+    const passportCopyFile = files.passportCopy[0];
+    const passportCopyData = {
+      originalName: passportCopyFile.originalname,
+      fileName: passportCopyFile.filename,
+      filePath: passportCopyFile.path,
+      fileType: passportCopyFile.mimetype,
+      fileSize: passportCopyFile.size,
+      fileExtension: path.extname(passportCopyFile.originalname),
+      fileCreatedAt: new Date(),
+      fileUpdatedAt: new Date(),
+    };
 
     const gicAccountRequest = new CreateGicAccountModel({
       user: userId,
@@ -40,8 +91,8 @@ export const createGicAccountRequest = async (
       countryCode,
       email,
       blockedAccountPreference,
-      offerLetter,
-      passportCopy,
+      offerLetter: [offerLetterData],
+      passportCopy: [passportCopyData],
       status: "pending",
     });
 
@@ -54,6 +105,24 @@ export const createGicAccountRequest = async (
     );
   } catch (err) {
     console.error("Error creating GIC account request:", err);
+    
+    // Clean up uploaded files if there was an error
+    if (req.files) {
+      const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+      Object.values(files).forEach(fileArray => {
+        fileArray.forEach(file => {
+          try {
+            if (fs.existsSync(file.path)) {
+              fs.unlinkSync(file.path);
+              console.log(`Deleted file: ${file.path}`);
+            }
+          } catch (deleteErr) {
+            console.error(`Error deleting file ${file.path}:`, deleteErr);
+          }
+        });
+      });
+    }
+    
     return responseHelper.serverError(
       res,
       "Failed to create GIC account request"

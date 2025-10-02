@@ -7,6 +7,7 @@ import {
   forgotPasswordController,
   resetPasswordController,
 } from "../controllers";
+import { googleAuth, facebookAuth } from "../controllers/socialAuth.controller";
 
 const router = Router();
 
@@ -16,4 +17,9 @@ router.post("/forgot-password", forgotPasswordController);
 router.patch("/reset-password", resetPasswordController);
 router.post("/logout", logout);
 router.post("/refresh-token", refreshAccessToken);
+
+// Social login routes
+router.post("/google", googleAuth);
+router.post("/facebook", facebookAuth);
+
 export default router;
