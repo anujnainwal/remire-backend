@@ -21,8 +21,33 @@ export const createGicPaymentOrder = async (
     const userId = req.user && req.user._id;
     if (!userId) return responseHelper.unauthorized(res);
 
+    // Handle multipart form data
     const body = req.body || {};
-    const parsed = gicPaymentValidationSchema.safeParse(body);
+    
+    // Convert string values to appropriate types for validation
+    const formData = {
+      fromCountry: body.fromCountry ? parseInt(body.fromCountry) : undefined,
+      fromState: body.fromState ? parseInt(body.fromState) : undefined,
+      fromCity: body.fromCity ? parseInt(body.fromCity) : undefined,
+      transferTo: body.transferTo,
+      purpose: body.purpose,
+      currency: body.currency,
+      amount: body.amount ? parseFloat(body.amount) : undefined,
+      total: body.total ? parseFloat(body.total) : undefined,
+      canadianDetails: {
+        universityName: body.universityName,
+        programOfStudy: body.programOfStudy,
+        intake: body.intake,
+        expectedDuration: body.expectedDuration,
+        passportNumber: body.passportNumber,
+        visaType: body.visaType,
+        bankAccountNumber: body.bankAccountNumber,
+        ifscCode: body.ifscCode,
+        gicProvider: body.gicProvider,
+      },
+    };
+
+    const parsed = gicPaymentValidationSchema.safeParse(formData);
     if (!parsed.success) {
       return responseHelper.validationError(
         res,
@@ -40,8 +65,30 @@ export const createGicPaymentOrder = async (
       amount,
       total,
       canadianDetails,
-      complianceDocuments,
     } = parsed.data;
+
+    // Handle uploaded files
+    const files = req.files as Express.Multer.File[] | undefined;
+    const complianceDocuments: any = {};
+    
+    if (files && files.length > 0) {
+      files.forEach(file => {
+        const fieldName = file.fieldname;
+        if (fieldName.startsWith('compliance_')) {
+          const docType = fieldName.replace('compliance_', '');
+          if (!complianceDocuments[docType]) {
+            complianceDocuments[docType] = [];
+          }
+          complianceDocuments[docType].push({
+            originalName: file.originalname,
+            filename: file.filename,
+            path: file.path,
+            size: file.size,
+            mimetype: file.mimetype
+          });
+        }
+      });
+    }
 
     // Calculate exchange rate
     const exchangeRate =

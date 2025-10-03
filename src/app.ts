@@ -18,6 +18,7 @@ import orderRouter from "./modules/forex-services/routes/order.routes";
 import cartRouter from "./modules/forex-services/routes/cart.routes";
 import paymentRouter from "./modules/forex-services/routes/payment.routes";
 import webhookRouter from "./modules/forex-services/routes/webhook.routes";
+import contactRouter from "./modules/contact/routes/contact.routes";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import { corsOption } from "./config/corsOptions";
@@ -26,12 +27,26 @@ import { autoSeedSuperAdmin } from "./config/autoSeed";
 const app = express();
 
 app.use(cors(corsOption));
-app.use(express.json());
+
+// Increase body parser limits for file uploads
+// Skip JSON parsing for multipart routes
+app.use((req, res, next) => {
+  if (req.path.includes('/create-gic-account') || 
+      req.path.includes('/gic-payment') ||
+      req.path.includes('/upload') ||
+      req.path.includes('/contact')) {
+    return next(); // Skip JSON parsing for multipart routes
+  }
+  express.json({ limit: '50mb' })(req, res, next);
+});
+
+app.use(express.urlencoded({ 
+  extended: true, 
+  limit: '50mb' 
+}));
 
 // Use cookie-parser for secure cookie handling
 app.use(cookieParser(process.env.COOKIE_SECRET));
-// parse URL-encoded body if needed
-app.use(express.urlencoded({ extended: true }));
 app.use(
   morgan("dev", {
     stream: {
@@ -85,6 +100,8 @@ app.use("/api/v1/forex", orderRouter);
 app.use("/api/v1/forex", cartRouter);
 app.use("/api/v1/forex", paymentRouter);
 app.use("/api/v1", webhookRouter);
+// Contact Routes
+app.use("/api/v1", contactRouter);
 
 // 404 not found - register a catch-all handler without a string path
 // to avoid path-to-regexp parsing issues (some versions treat '/*' as an invalid token).
@@ -94,6 +111,19 @@ app.use((req: Request, res: Response) => {
 
 // Error logging middleware (should be after all routes)
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+  // Handle specific error types
+  if (err.type === 'entity.too.large') {
+    return responseHelper.badRequest(res, "Request entity too large. Maximum size is 50MB.");
+  }
+  
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    return responseHelper.badRequest(res, "File too large. Maximum size is 10MB per file.");
+  }
+  
+  if (err.code === 'LIMIT_FILE_COUNT') {
+    return responseHelper.badRequest(res, "Too many files. Maximum 10 files allowed.");
+  }
+
   logger.error(
     {
       message: err.message,

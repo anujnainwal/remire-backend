@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { ZodSchema, ZodError } from "zod";
 import { responseHelper } from "../utils/responseHelper";
+import logger from "../config/logger";
 
 export const validateRequest = (schema: ZodSchema) => {
   return (req: Request, res: Response, next: NextFunction) => {
@@ -16,8 +17,6 @@ export const validateRequest = (schema: ZodSchema) => {
 
       // Replace the original data with validated data
       req.body = validatedData;
-      req.query = {};
-      req.params = {};
 
       next();
     } catch (error) {
@@ -26,8 +25,22 @@ export const validateRequest = (schema: ZodSchema) => {
           .map((err: any) => `${err.path.join(".")}: ${err.message}`)
           .join(", ");
 
+        logger.error({
+          message: "Validation error",
+          error: errorMessage,
+          path: req.path,
+          method: req.method,
+        });
+
         return responseHelper.validationError(res, errorMessage);
       }
+
+      logger.error({
+        message: "Validation middleware error",
+        error: error,
+        path: req.path,
+        method: req.method,
+      });
 
       return responseHelper.serverError(res, "Validation error");
     }

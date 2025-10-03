@@ -6,6 +6,17 @@ import createGicAccountValidationSchema from "../validations/createGicAccountVal
 import path from "path";
 import fs from "fs";
 
+// Helper function to check if user already has a GIC account request
+export const checkUserGicAccountExists = async (userId: string): Promise<boolean> => {
+  try {
+    const existingRequest = await CreateGicAccountModel.findOne({ user: userId });
+    return !!existingRequest;
+  } catch (error) {
+    console.error("Error checking GIC account existence:", error);
+    return false;
+  }
+};
+
 export const createGicAccountRequest = async (
   req: AuthRequest,
   res: Response
@@ -13,6 +24,16 @@ export const createGicAccountRequest = async (
   try {
     const userId = req.user && req.user._id;
     if (!userId) return responseHelper.unauthorized(res);
+
+    // Check if user already has a GIC account request
+    const hasExistingRequest = await checkUserGicAccountExists(userId);
+    
+    if (hasExistingRequest) {
+      return responseHelper.badRequest(
+        res,
+        "You already have a GIC account request. Only one request per user is allowed."
+      );
+    }
 
     // Validate body data (excluding files)
     const body = req.body || {};
@@ -103,8 +124,16 @@ export const createGicAccountRequest = async (
       gicAccountRequest,
       "GIC account request created successfully. Our team will contact you shortly."
     );
-  } catch (err) {
+  } catch (err: any) {
     console.error("Error creating GIC account request:", err);
+    
+    // Handle unique constraint violation (duplicate user)
+    if (err.code === 11000 && err.keyPattern?.user) {
+      return responseHelper.badRequest(
+        res,
+        "You already have a GIC account request. Only one request per user is allowed."
+      );
+    }
     
     // Clean up uploaded files if there was an error
     if (req.files) {
@@ -127,6 +156,51 @@ export const createGicAccountRequest = async (
       res,
       "Failed to create GIC account request"
     );
+  }
+};
+
+// Check if user has existing GIC account request
+export const checkGicAccountStatus = async (
+  req: AuthRequest,
+  res: Response
+) => {
+  try {
+    const userId = req.user && req.user._id;
+    if (!userId) return responseHelper.unauthorized(res);
+
+    const hasExistingRequest = await checkUserGicAccountExists(userId);
+    
+    if (hasExistingRequest) {
+      // Get the existing request details
+      const existingRequest = await CreateGicAccountModel.findOne({ user: userId })
+        .select('status createdAt updatedAt')
+        .lean();
+      
+      return responseHelper.success(
+        res,
+        {
+          hasExistingRequest: true,
+          status: existingRequest?.status,
+          createdAt: existingRequest?.createdAt,
+          updatedAt: existingRequest?.updatedAt,
+        },
+        "User has an existing GIC account request"
+      );
+    }
+
+    return responseHelper.success(
+      res,
+      {
+        hasExistingRequest: false,
+        status: null,
+        createdAt: null,
+        updatedAt: null,
+      },
+      "User does not have any GIC account request"
+    );
+  } catch (error) {
+    console.error("Error checking GIC account status:", error);
+    return responseHelper.serverError(res, "Failed to check GIC account status");
   }
 };
 

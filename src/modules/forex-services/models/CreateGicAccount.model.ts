@@ -57,6 +57,9 @@ const createGicAccountSchema: Schema<ICreateGicAccount> = new Schema(
   { timestamps: true }
 );
 
+// Add unique index to ensure one GIC account request per user
+createGicAccountSchema.index({ user: 1 }, { unique: true });
+
 const CreateGicAccountModel: Model<ICreateGicAccount> =
   mongoose.model<ICreateGicAccount>("CreateGicAccount", createGicAccountSchema);
 
