@@ -7,7 +7,10 @@ const allowedWhiteLists = [
   "http://127.0.0.1:3000",
   "http://127.0.0.1:8080",
   "https://remiwire.vercel.app",
-  "https://remire-frontend.vercel.app"
+  "https://remire-frontend.vercel.app",
+  "http://178.16.138.214:8100",
+  "https://api.remiwire.com",
+  "https://remiwire.com"
 ];
 
 export const corsOption = {
