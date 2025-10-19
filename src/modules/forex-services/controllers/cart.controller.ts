@@ -13,23 +13,28 @@ export const getCart = async (req: AuthRequest, res: Response) => {
     const userId = req.user && req.user._id;
     if (!userId) return responseHelper.unauthorized(res);
 
-    let cart = await CartModel.findOne({
+    const cart = await CartModel.findOne({
       user: userId,
       status: "active",
     }).populate("user", "email firstName lastName");
 
     if (!cart) {
-      // Create a new cart if none exists
-      cart = new CartModel({
+      // Return empty cart response instead of creating one
+      return responseHelper.success(res, {
+        _id: null,
         user: userId,
         items: [],
         subtotal: 0,
         totalAmount: 0,
         currency: "INR",
         status: "active",
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
-      });
-      await cart.save();
+        discountAmount: 0,
+        taxAmount: 0,
+        expiresAt: null,
+        lastAccessedAt: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }, "Cart fetched successfully");
     }
 
     return responseHelper.success(res, cart, "Cart fetched successfully");
@@ -86,7 +91,11 @@ export const addToCart = async (req: AuthRequest, res: Response) => {
     }
 
     // Recalculate cart totals
-    cart.subtotal = cart.items.reduce((sum, item) => sum + item.totalPrice, 0);
+    // totalPrice should already be in INR (converted by frontend)
+    cart.subtotal = cart.items.reduce((sum, item) => {
+      // Simply sum up the totalPrice as it should already be in INR
+      return sum + item.totalPrice;
+    }, 0);
     cart.totalAmount = cart.subtotal + cart.taxAmount - cart.discountAmount;
 
     await cart.save();
@@ -134,6 +143,14 @@ export const updateCartItem = async (req: AuthRequest, res: Response) => {
       cart.items[itemIndex].totalPrice =
         cart.items[itemIndex].quantity * cart.items[itemIndex].unitPrice;
     }
+
+    // Recalculate cart totals
+    // totalPrice should already be in INR (converted by frontend)
+    cart.subtotal = cart.items.reduce((sum, item) => {
+      // Simply sum up the totalPrice as it should already be in INR
+      return sum + item.totalPrice;
+    }, 0);
+    cart.totalAmount = cart.subtotal + cart.taxAmount - cart.discountAmount;
 
     await cart.save();
 

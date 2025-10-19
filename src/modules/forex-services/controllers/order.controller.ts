@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import mongoose from "mongoose";
 import OrderModel from "../models/Order.model";
 import { responseHelper } from "../../../utils/responseHelper";
 import { AuthRequest } from "../../../middlewares/auth.middleware";
@@ -102,6 +103,12 @@ export const getOrder = async (req: AuthRequest, res: Response) => {
     if (!userId) return responseHelper.unauthorized(res);
 
     const { id } = req.params;
+    
+    // Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return responseHelper.badRequest(res, "Invalid order ID");
+    }
+
     const order = await OrderModel.findOne({
       _id: id,
       user: userId,
@@ -124,6 +131,12 @@ export const updateOrder = async (req: AuthRequest, res: Response) => {
     if (!userId) return responseHelper.unauthorized(res);
 
     const { id } = req.params;
+    
+    // Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return responseHelper.badRequest(res, "Invalid order ID");
+    }
+
     const body = req.body || {};
     const parsed = updateOrderSchema.safeParse(body);
     if (!parsed.success) {
@@ -161,6 +174,12 @@ export const deleteOrder = async (req: AuthRequest, res: Response) => {
     if (!userId) return responseHelper.unauthorized(res);
 
     const { id } = req.params;
+    
+    // Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return responseHelper.badRequest(res, "Invalid order ID");
+    }
+
     const order = await OrderModel.findOneAndDelete({
       _id: id,
       user: userId,

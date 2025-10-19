@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import mongoose from "mongoose";
 import SendMoneyModel from "../models/SendMoney.model";
 import { responseHelper } from "../../../utils/responseHelper";
 import { AuthRequest } from "../../../middlewares/auth.middleware";
@@ -6,11 +7,11 @@ import sendMoneyValidationSchema from "../validations/sendMoneyValidation";
 
 // Exchange rates (in a real app, this would come from an external API)
 const EXCHANGE_RATES = {
-  usd: 83.5,
-  eur: 98.2,
-  gbp: 114.3,
-  cad: 61.8,
-  aud: 54.2,
+  usd: 83.5,  // 1 USD = 83.5 INR
+  eur: 98.2,  // 1 EUR = 98.2 INR
+  gbp: 114.3, // 1 GBP = 114.3 INR
+  cad: 61.8,  // 1 CAD = 61.8 INR
+  aud: 54.2,  // 1 AUD = 54.2 INR
 };
 
 export const createSendMoneyOrder = async (req: AuthRequest, res: Response) => {
@@ -112,6 +113,12 @@ export const getSendMoneyOrder = async (req: AuthRequest, res: Response) => {
     if (!userId) return responseHelper.unauthorized(res);
 
     const orderId = req.params.id;
+    
+    // Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+      return responseHelper.badRequest(res, "Invalid order ID");
+    }
+
     const order = await SendMoneyModel.findOne({ _id: orderId, user: userId });
 
     if (!order) {
@@ -138,6 +145,12 @@ export const updateSendMoneyOrderStatus = async (
     if (!userId) return responseHelper.unauthorized(res);
 
     const orderId = req.params.id;
+    
+    // Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+      return responseHelper.badRequest(res, "Invalid order ID");
+    }
+
     const { status, kycStatus } = req.body;
 
     const order = await SendMoneyModel.findOne({ _id: orderId, user: userId });
