@@ -1,4 +1,40 @@
 import * as z from "zod";
+
+// Normalize and validate deviceType from diverse mobile clients
+const allowedDeviceTypes = [
+  "web",
+  "mobile",
+  "tablet",
+  "desktop",
+  "ios",
+  "android",
+  "local",
+] as const;
+
+const deviceTypeSchema = z
+  .string()
+  .transform((v) => (v || "").toLowerCase().trim())
+  .transform((v) => {
+    const aliasMap: Record<string, string> = {
+      iphone: "ios",
+      ipad: "ios",
+      ios: "ios",
+      android: "android",
+      phone: "mobile",
+      smartphone: "mobile",
+      mobile: "mobile",
+      tablet: "tablet",
+      desktop: "desktop",
+      browser: "web",
+      web: "web",
+      local: "local",
+    };
+    return aliasMap[v] || v;
+  })
+  .refine((v) => (allowedDeviceTypes as readonly string[]).includes(v), {
+    message: "Invalid deviceType",
+  })
+  .optional();
 // User register validation
 export const registerSchema = z.object({
   firstname: z.string().min(2, "First name must be at least 2 characters"),
@@ -7,7 +43,7 @@ export const registerSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters"),
   role: z.enum(["user", "technician"]).optional(),
   deviceId: z.string().optional(),
-  deviceType: z.enum(["ios", "android", "web"]).optional(),
+  deviceType: deviceTypeSchema,
   fcmToken: z.string().optional(),
   userAgent: z.string().optional(),
   timezone: z.string().optional(),
@@ -26,7 +62,7 @@ export const loginSchema = z.object({
   email: z.string().email("Invalid email address").lowercase().trim(),
   password: z.string().min(6, "Password must be at least 6 characters"),
   deviceId: z.string().uuid().optional(),
-  deviceType: z.enum(["ios", "android", "web"]).optional(),
+  deviceType: deviceTypeSchema,
   fcmToken: z.string().optional(),
   userAgent: z.string().optional(),
   timezone: z.string().optional(),
