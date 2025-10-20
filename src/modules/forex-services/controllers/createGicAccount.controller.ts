@@ -20,7 +20,8 @@ export const checkUserGicAccountExists = async (userId: string): Promise<boolean
 // Helper function to check if email is already used by another user
 export const checkEmailExists = async (email: string, excludeUserId?: string): Promise<boolean> => {
   try {
-    const query: any = { email: email.toLowerCase().trim() };
+    const normalizedEmail = email.toLowerCase().trim();
+    const query: any = { email: normalizedEmail };
     if (excludeUserId) {
       query.user = { $ne: excludeUserId };
     }
@@ -35,9 +36,11 @@ export const checkEmailExists = async (email: string, excludeUserId?: string): P
 // Helper function to check if phone number is already used by another user
 export const checkPhoneNumberExists = async (mobileNumber: string, countryCode: string, excludeUserId?: string): Promise<boolean> => {
   try {
+    const normalizedMobile = mobileNumber.trim();
+    const normalizedCountryCode = countryCode.trim();
     const query: any = { 
-      mobileNumber: mobileNumber.trim(),
-      countryCode: countryCode.trim()
+      mobileNumber: normalizedMobile,
+      countryCode: normalizedCountryCode
     };
     if (excludeUserId) {
       query.user = { $ne: excludeUserId };
@@ -111,8 +114,8 @@ export const createGicAccountRequest = async (
       blockedAccountPreference,
     } = parsed.data;
 
-    // Check if email is already used by another user
-    const emailExists = await checkEmailExists(email, userId);
+    // Check if email is already used by any user (including current user)
+    const emailExists = await checkEmailExists(email);
     if (emailExists) {
       return responseHelper.badRequest(
         res,
@@ -120,8 +123,8 @@ export const createGicAccountRequest = async (
       );
     }
 
-    // Check if phone number is already used by another user
-    const phoneExists = await checkPhoneNumberExists(mobileNumber, countryCode, userId);
+    // Check if phone number is already used by any user (including current user)
+    const phoneExists = await checkPhoneNumberExists(mobileNumber, countryCode);
     if (phoneExists) {
       return responseHelper.badRequest(
         res,
