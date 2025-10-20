@@ -17,6 +17,39 @@ export const checkUserGicAccountExists = async (userId: string): Promise<boolean
   }
 };
 
+// Helper function to check if email is already used by another user
+export const checkEmailExists = async (email: string, excludeUserId?: string): Promise<boolean> => {
+  try {
+    const query: any = { email: email.toLowerCase().trim() };
+    if (excludeUserId) {
+      query.user = { $ne: excludeUserId };
+    }
+    const existingRequest = await CreateGicAccountModel.findOne(query);
+    return !!existingRequest;
+  } catch (error) {
+    console.error("Error checking email existence:", error);
+    return false;
+  }
+};
+
+// Helper function to check if phone number is already used by another user
+export const checkPhoneNumberExists = async (mobileNumber: string, countryCode: string, excludeUserId?: string): Promise<boolean> => {
+  try {
+    const query: any = { 
+      mobileNumber: mobileNumber.trim(),
+      countryCode: countryCode.trim()
+    };
+    if (excludeUserId) {
+      query.user = { $ne: excludeUserId };
+    }
+    const existingRequest = await CreateGicAccountModel.findOne(query);
+    return !!existingRequest;
+  } catch (error) {
+    console.error("Error checking phone number existence:", error);
+    return false;
+  }
+};
+
 export const createGicAccountRequest = async (
   req: AuthRequest,
   res: Response
@@ -78,6 +111,24 @@ export const createGicAccountRequest = async (
       blockedAccountPreference,
     } = parsed.data;
 
+    // Check if email is already used by another user
+    const emailExists = await checkEmailExists(email, userId);
+    if (emailExists) {
+      return responseHelper.badRequest(
+        res,
+        "This email address is already registered with another GIC account request. Please use a different email address."
+      );
+    }
+
+    // Check if phone number is already used by another user
+    const phoneExists = await checkPhoneNumberExists(mobileNumber, countryCode, userId);
+    if (phoneExists) {
+      return responseHelper.badRequest(
+        res,
+        "This phone number is already registered with another GIC account request. Please use a different phone number."
+      );
+    }
+
     // Process offer letter file
     const offerLetterFile = files.offerLetter[0];
     const offerLetterData = {
@@ -127,12 +178,26 @@ export const createGicAccountRequest = async (
   } catch (err: any) {
     console.error("Error creating GIC account request:", err);
     
-    // Handle unique constraint violation (duplicate user)
-    if (err.code === 11000 && err.keyPattern?.user) {
-      return responseHelper.badRequest(
-        res,
-        "You already have a GIC account request. Only one request per user is allowed."
-      );
+    // Handle unique constraint violations
+    if (err.code === 11000) {
+      if (err.keyPattern?.user) {
+        return responseHelper.badRequest(
+          res,
+          "You already have a GIC account request. Only one request per user is allowed."
+        );
+      }
+      if (err.keyPattern?.email) {
+        return responseHelper.badRequest(
+          res,
+          "This email address is already registered with another GIC account request. Please use a different email address."
+        );
+      }
+      if (err.keyPattern?.mobileNumber) {
+        return responseHelper.badRequest(
+          res,
+          "This phone number is already registered with another GIC account request. Please use a different phone number."
+        );
+      }
     }
     
     // Clean up uploaded files if there was an error
