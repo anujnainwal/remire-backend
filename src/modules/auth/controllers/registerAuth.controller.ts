@@ -15,11 +15,13 @@ import {
 } from "../../../utils/token.util";
 
 export const register = async (req: Request, res: Response) => {
-  console.log("singup-> body:- ",req.body)
+
   try {
     // 1️⃣ Validate input with Zod
+    console.log("singup-> body:- ",req.body)
     const parsed = registerSchema.safeParse(req.body);
     if (!parsed.success) {
+      console.log("singup-> error:- ",parsed.error)
       const firstError = parsed.error.issues[0];
       return responseHelper.validationError(res, firstError.message, req);
     }
