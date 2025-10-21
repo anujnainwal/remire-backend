@@ -1,6 +1,41 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 
 export interface IOrderMetadata {
+  // Forex Currency metadata
+  forexCurrency?: {
+    location: string;
+    currencyYouHave: string;
+    currencyYouWant: string;
+    productType: string;
+    amount: number;
+    equivalentAmount: number;
+    transactionType: "buy" | "sell";
+    orderItems: Array<{
+      currencyYouWant: string;
+      productType: string;
+      amount: number;
+      equivalentAmount: number;
+      exchangeRate: number;
+    }>;
+    travelDetails: {
+      fullName: string;
+      dateOfBirth: string;
+      email: string;
+      mobileNumber: string;
+    };
+    deliveryAddress: {
+      addressLine1: string;
+      addressLine2?: string;
+      city: string;
+      state: string;
+      pincode: string;
+      country: string;
+    };
+    documents: Array<{
+      type: "pan" | "visa" | "ticket";
+      name: string;
+    }>;
+  };
   // Send Money specific metadata
   sendMoney?: {
     fromState: number;
@@ -143,6 +178,7 @@ export interface IOrder extends Document {
     | "german-blocked-account"
     | "gic-payment"
     | "create-gic-account"
+    | "forex-currency"
     | "education-loan";
   orderNumber: string;
   status:
@@ -267,6 +303,8 @@ orderSchema.pre("save", function (next) {
   }
   next();
 });
+
+
 
 const OrderModel: Model<IOrder> = mongoose.model<IOrder>("Order", orderSchema);
 

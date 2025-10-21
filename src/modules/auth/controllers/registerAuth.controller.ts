@@ -20,7 +20,7 @@ export const register = async (req: Request, res: Response) => {
     const parsed = registerSchema.safeParse(req.body);
     if (!parsed.success) {
       const firstError = parsed.error.issues[0];
-      return responseHelper.validationError(res, firstError.message);
+      return responseHelper.validationError(res, firstError.message, req);
     }
 
     const { email, password, timezone, deviceId, ...rest } = parsed.data as any;
@@ -28,7 +28,7 @@ export const register = async (req: Request, res: Response) => {
     // 2️⃣ Check if email already exists
     const existingUser = await UserModel.findOne({ email });
     if (existingUser) {
-      return responseHelper.error(res, "Email already registered");
+      return responseHelper.error(res, "Email already registered", 400, req);
     }
 
     // 4️⃣ Create new user
@@ -106,7 +106,7 @@ export const register = async (req: Request, res: Response) => {
     );
   } catch (err) {
     console.error("Registration Error:", err);
-    return responseHelper.serverError(res, "Registration failed");
+    return responseHelper.serverError(res, "Registration failed", req);
   }
 };
 // Login Controller
@@ -116,17 +116,18 @@ export const login = async (req: Request, res: Response) => {
     if (!parsed.success) {
       return responseHelper.validationError(
         res,
-        parsed.error.issues[0].message
+        parsed.error.issues[0].message,
+        req
       );
     }
     const { email, password, timezone, deviceId } = parsed.data as any;
     const user = await UserModel.findOne({ email });
     if (!user || !user.password) {
-      return responseHelper.unauthorized(res, "Invalid credentials");
+      return responseHelper.unauthorized(res, "Invalid credentials", req);
     }
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
-      return responseHelper.unauthorized(res, "Invalid credentials");
+      return responseHelper.unauthorized(res, "Invalid credentials", req);
     }
     // Update timezone if provided
     if (timezone && timezone !== user.timezone) {
@@ -202,7 +203,7 @@ export const login = async (req: Request, res: Response) => {
         refreshToken: refreshToken
       }, "Login successful");
   } catch (err) {
-    return responseHelper.serverError(res, "Login failed");
+    return responseHelper.serverError(res, "Login failed", req);
   }
 };
 
@@ -214,13 +215,14 @@ export const forgotPassword = async (req: Request, res: Response) => {
     if (!parsed.success) {
       return responseHelper.validationError(
         res,
-        parsed.error.issues[0].message
+        parsed.error.issues[0].message,
+        req
       );
     }
     const { email } = parsed.data;
     const user = await UserModel.findOne({ email });
     if (!user) {
-      return responseHelper.notFound(res, "User not found");
+      return responseHelper.notFound(res, "User not found", req);
     }
     // Generate reset token
     const resetToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET!, {
@@ -232,7 +234,7 @@ export const forgotPassword = async (req: Request, res: Response) => {
     // TODO: Send email with resetToken (implement email service)
     return responseHelper.success(res, null, "Password reset email sent");
   } catch (err) {
-    return responseHelper.serverError(res, "Failed to send reset email");
+    return responseHelper.serverError(res, "Failed to send reset email", req);
   }
 };
 
@@ -243,7 +245,8 @@ export const resetPassword = async (req: Request, res: Response) => {
     if (!parsed.success) {
       return responseHelper.validationError(
         res,
-        parsed.error.issues[0].message
+        parsed.error.issues[0].message,
+        req
       );
     }
     const { password, token } = parsed.data;
@@ -255,7 +258,7 @@ export const resetPassword = async (req: Request, res: Response) => {
       !user.resetPasswordTokenExpire ||
       user.resetPasswordTokenExpire < new Date()
     ) {
-      return responseHelper.unauthorized(res, "Invalid or expired reset token");
+      return responseHelper.unauthorized(res, "Invalid or expired reset token", req);
     }
     user.password = password;
     user.resetPasswordToken = undefined;
@@ -263,7 +266,7 @@ export const resetPassword = async (req: Request, res: Response) => {
     await user.save();
     return responseHelper.success(res, null, "Password reset successful");
   } catch (err) {
-    return responseHelper.serverError(res, "Password reset failed");
+    return responseHelper.serverError(res, "Password reset failed", req);
   }
 };
 
@@ -273,14 +276,15 @@ export const logout = async (req: Request, res: Response) => {
     const { refreshToken } = body;
 
     if (!refreshToken || typeof refreshToken !== "string") {
-      return responseHelper.badRequest(res, "Refresh token is required");
+      return responseHelper.badRequest(res, "Refresh token is required", req);
     }
 
     const authSession = await AuthModel.findOne({ refreshToken });
     if (!authSession) {
       return responseHelper.notFound(
         res,
-        "Session not found or already logged out"
+        "Session not found or already logged out",
+        req
       );
     }
 
@@ -291,7 +295,7 @@ export const logout = async (req: Request, res: Response) => {
     return responseHelper.success(res, null, "Logged out successfully");
   } catch (err: any) {
     console.error("Logout error:", err);
-    return responseHelper.serverError(res, "Logout failed, please try again");
+    return responseHelper.serverError(res, "Logout failed, please try again", req);
   }
 };
 
@@ -306,7 +310,7 @@ export const refreshAccessToken = async (req: Request, res: Response) => {
         String(req.headers.authorization).split(" ")[1]);
 
     if (!token || typeof token !== "string") {
-      return responseHelper.unauthorized(res, "Refresh token required");
+      return responseHelper.unauthorized(res, "Refresh token required", req);
     }
 
     // Verify refresh token
@@ -316,14 +320,15 @@ export const refreshAccessToken = async (req: Request, res: Response) => {
     } catch (err) {
       return responseHelper.unauthorized(
         res,
-        "Invalid or expired refresh token"
+        "Invalid or expired refresh token",
+        req
       );
     }
 
     // Ensure session exists and is active
     const authSession = await AuthModel.findOne({ refreshToken: token });
     if (!authSession || !authSession.isActive()) {
-      return responseHelper.unauthorized(res, "Session not found or inactive");
+      return responseHelper.unauthorized(res, "Session not found or inactive", req);
     }
 
     // Build payload and issue new access token
@@ -346,6 +351,6 @@ export const refreshAccessToken = async (req: Request, res: Response) => {
     return responseHelper.success(res, null, "Access token refreshed");
   } catch (err) {
     console.error("Refresh token error:", err);
-    return responseHelper.serverError(res, "Failed to refresh access token");
+    return responseHelper.serverError(res, "Failed to refresh access token", req);
   }
 };

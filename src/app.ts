@@ -15,6 +15,7 @@ import gicPaymentRouter from "./modules/forex-services/routes/gicPayment.routes"
 import createGicAccountRouter from "./modules/forex-services/routes/createGicAccount.routes";
 import educationLoanRouter from "./modules/forex-services/routes/educationLoan.routes";
 import orderRouter from "./modules/forex-services/routes/order.routes";
+import forexCurrencyRouter from "./modules/forex-services/routes/forexCurrency.routes";
 import cartRouter from "./modules/forex-services/routes/cart.routes";
 import paymentRouter from "./modules/forex-services/routes/payment.routes";
 import webhookRouter from "./modules/forex-services/routes/webhook.routes";
@@ -26,7 +27,9 @@ import { autoSeedSuperAdmin } from "./config/autoSeed";
 
 const app = express();
 
-app.use(cors(corsOption));
+app.use(cors({
+  origin:"*"
+}));
 
 // Increase body parser limits for file uploads
 // Skip JSON parsing for multipart routes
@@ -94,6 +97,7 @@ app.use("/api/v1/forex", sendMoneyRouter);
 app.use("/api/v1/forex", nriRepatriationRouter);
 app.use("/api/v1/forex", germanBlockedAccountRouter);
 app.use("/api/v1/forex", gicPaymentRouter);
+app.use("/api/v1/forex", forexCurrencyRouter);
 app.use("/api/v1/forex", createGicAccountRouter);
 app.use("/api/v1/forex", educationLoanRouter);
 app.use("/api/v1/forex", orderRouter);
@@ -113,28 +117,99 @@ app.use((req: Request, res: Response) => {
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   // Handle specific error types
   if (err.type === 'entity.too.large') {
+    logger.error({
+      error: "Request entity too large",
+      method: req.method,
+      url: req.url,
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
+      body: req.body,
+      query: req.query,
+      params: req.params,
+      statusCode: 400
+    }, "400 - Request too large");
     return responseHelper.badRequest(res, "Request entity too large. Maximum size is 50MB.");
   }
   
   if (err.code === 'LIMIT_FILE_SIZE') {
+    logger.error({
+      error: "File too large",
+      method: req.method,
+      url: req.url,
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
+      body: req.body,
+      query: req.query,
+      params: req.params,
+      statusCode: 400
+    }, "400 - File too large");
     return responseHelper.badRequest(res, "File too large. Maximum size is 10MB per file.");
   }
   
   if (err.code === 'LIMIT_FILE_COUNT') {
-    return responseHelper.badRequest(res, "Too many files. Maximum 10 files allowed.");
-  }
-
-  logger.error(
-    {
-      message: err.message,
-      stack: err.stack,
+    logger.error({
+      error: "Too many files",
       method: req.method,
       url: req.url,
       ip: req.ip,
+      userAgent: req.headers['user-agent'],
+      body: req.body,
+      query: req.query,
+      params: req.params,
+      statusCode: 400
+    }, "400 - Too many files");
+    return responseHelper.badRequest(res, "Too many files. Maximum 10 files allowed.");
+  }
+
+  // Determine status code
+  const statusCode = err.statusCode || err.status || 500;
+  
+  // Log error with comprehensive details
+  const errorLog = {
+    error: err.message || "Unknown error",
+    stack: err.stack,
+    method: req.method,
+    url: req.url,
+    ip: req.ip,
+    userAgent: req.headers['user-agent'],
+    body: req.body,
+    query: req.query,
+    params: req.params,
+    headers: {
+      authorization: req.headers.authorization ? 'Bearer [REDACTED]' : undefined,
+      'content-type': req.headers['content-type'],
+      'content-length': req.headers['content-length']
     },
-    "Unhandled error"
-  );
-  responseHelper.serverError(res, "Internal server error");
+    statusCode: statusCode,
+    timestamp: new Date().toISOString()
+  };
+
+  // Log based on status code
+  if (statusCode >= 500) {
+    logger.error(errorLog, "500 - Server Error");
+  } else if (statusCode === 404) {
+    logger.warn(errorLog, "404 - Not Found");
+  } else if (statusCode === 401) {
+    logger.warn(errorLog, "401 - Unauthorized");
+  } else if (statusCode >= 400) {
+    logger.warn(errorLog, "400 - Bad Request");
+  } else {
+    logger.error(errorLog, "Unhandled error");
+  }
+
+  // Send appropriate response
+  if (statusCode >= 500) {
+    responseHelper.serverError(res, "Internal server error");
+  } else if (statusCode === 404) {
+    responseHelper.notFound(res, "Route not found");
+  } else if (statusCode === 401) {
+    responseHelper.unauthorized(res, "Unauthorized");
+  } else if (statusCode >= 400) {
+    responseHelper.badRequest(res, err.message || "Bad request");
+  } else {
+    responseHelper.serverError(res, "Internal server error");
+  }
+  
   return;
 });
 
