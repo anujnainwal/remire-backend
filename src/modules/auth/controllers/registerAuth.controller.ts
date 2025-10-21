@@ -15,6 +15,7 @@ import {
 } from "../../../utils/token.util";
 
 export const register = async (req: Request, res: Response) => {
+  console.log("singup-> body:- ",req.body)
   try {
     // 1️⃣ Validate input with Zod
     const parsed = registerSchema.safeParse(req.body);
