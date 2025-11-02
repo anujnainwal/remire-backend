@@ -16,7 +16,6 @@ const router = express.Router();
 // Public routes (no authentication required)
 router.post(
   "/contact/send-message",
-  validateRequest(contactMessageSchema),
   sendContactMessage
 );
 
