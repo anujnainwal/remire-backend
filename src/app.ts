@@ -24,12 +24,16 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import { corsOption } from "./config/corsOptions";
 import { autoSeedSuperAdmin } from "./config/autoSeed";
+import exchangeRouter from "./modules/forex-services/routes/exchange.route";
+import { startCronJobs } from "./cron/scheduler/scheduler";
 
 const app = express();
 
 app.use(cors({
   origin:"*"
 }));
+
+startCronJobs()
 
 // Increase body parser limits for file uploads
 // Skip JSON parsing for multipart routes
@@ -104,6 +108,7 @@ app.use("/api/v1/forex", educationLoanRouter);
 app.use("/api/v1/forex", orderRouter);
 app.use("/api/v1/forex", cartRouter);
 app.use("/api/v1/forex", paymentRouter);
+app.use("/api/v1/rate",exchangeRouter)
 app.use("/api/v1", webhookRouter);
 // Contact Routes
 app.use("/api/v1", contactRouter);
