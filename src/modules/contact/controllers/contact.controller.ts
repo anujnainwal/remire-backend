@@ -2,8 +2,6 @@ import { Response } from "express";
 import { AuthRequest } from "../../../middlewares/auth.middleware";
 import { responseHelper } from "../../../utils/responseHelper";
 import ContactMessage from "../models/ContactMessage.model";
-import emailService from "../../../services/third-party/email/nodemailer.service";
-import { generateContactEmailHTML, generateContactEmailText, ContactEmailData } from "../../../services/third-party/email/templates/contactTemplate";
 import logger from "../../../config/logger";
 
 // Get super admin email from environment or use default
@@ -23,86 +21,13 @@ export const sendContactMessage = async (req: AuthRequest, res: Response) => {
 
     await contactMessage.save();
 
-    // Prepare email data
-    const emailData: ContactEmailData = {
-      name,
-      email,
-      subject,
-      message,
-      timestamp: contactMessage.createdAt.toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-      priority: contactMessage.priority,
-    };
+    
 
-    // Send email to super admin
-    try {
-      await emailService.sendMail({
-        to: SUPER_ADMIN_EMAIL,
-        subject: `New Contact Message: ${subject}`,
-        html: generateContactEmailHTML(emailData),
-        text: generateContactEmailText(emailData),
-      });
+    
 
-      logger.info(`Contact message sent to super admin: ${SUPER_ADMIN_EMAIL}`);
-    } catch (emailError) {
-      logger.error({
-        message: "Failed to send contact email",
-        error: emailError,
-      });
-      // Don't fail the request if email fails, just log it
-    }
-
-    // Send confirmation email to customer
-    try {
-      await emailService.sendMail({
-        to: email,
-        subject: "Thank you for contacting Remiwire",
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <h2 style="color: #333;">Thank you for contacting Remiwire!</h2>
-            <p>Dear ${name},</p>
-            <p>We have received your message and will get back to you within 24 hours.</p>
-            <p><strong>Your message:</strong></p>
-            <div style="background: #f5f5f5; padding: 15px; border-radius: 5px; margin: 10px 0;">
-              <p><strong>Subject:</strong> ${subject}</p>
-              <p><strong>Message:</strong></p>
-              <p>${message}</p>
-            </div>
-            <p>Best regards,<br>The Remiwire Team</p>
-          </div>
-        `,
-        text: `
-Thank you for contacting Remiwire!
-
-Dear ${name},
-
-We have received your message and will get back to you within 24 hours.
-
-Your message:
-Subject: ${subject}
-Message: ${message}
-
-Best regards,
-The Remiwire Team
-        `,
-      });
-
-      logger.info(`Confirmation email sent to customer: ${email}`);
-    } catch (emailError) {
-      logger.error({
-        message: "Failed to send confirmation email",
-        error: emailError,
-      });
-      // Don't fail the request if email fails, just log it
-    }
 
     return responseHelper.success(res, {
-      messageId: String(contactMessage._id),
+      // messageId: String(contactMessage._id),
       status: contactMessage.status,
     }, "Message sent successfully");
   } catch (error: any) {

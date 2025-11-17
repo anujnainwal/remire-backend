@@ -174,23 +174,22 @@ export const updateSendMoneyOrderStatus = async (
   }
 };
 
-export const getExchangeRates = async (req: Request, res: Response) => {
-  try {
-    return responseHelper.success(
-      res,
-      EXCHANGE_RATES,
-      "Exchange rates fetched successfully"
-    );
-  } catch (err) {
-    console.error("Error fetching exchange rates:", err);
-    return responseHelper.serverError(res, "Failed to fetch exchange rates");
-  }
-};
+// export const getExchangeRates = async (req: Request, res: Response) => {
+//   try {
+//     return responseHelper.success(
+//       res,
+//       EXCHANGE_RATES,
+//       "Exchange rates fetched successfully"
+//     );
+//   } catch (err) {
+//     console.error("Error fetching exchange rates:", err);
+//     return responseHelper.serverError(res, "Failed to fetch exchange rates");
+//   }
+// };
 
 export default {
   createSendMoneyOrder,
   getSendMoneyOrders,
   getSendMoneyOrder,
   updateSendMoneyOrderStatus,
-  getExchangeRates,
 };

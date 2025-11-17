@@ -77,37 +77,139 @@ export const createExchangeRateInternal = async (_req: Request, res: Response) =
   }
 };
 
+// export const getExchangeRates = async (req: Request, res: Response) => {
+//   try {
+//     const { base_code, limit = 10, page = 1 } = req.query;
+
+//     const filter: any = {};
+//     if (base_code) {
+//       filter.base_code = String(base_code).toUpperCase();
+//     }
+
+//     const skip = (Number(page) - 1) * Number(limit);
+
+//     const [records, total] = await Promise.all([
+//       ExchangeRateModel.find(filter)
+//         .sort({ createdAt: -1 })
+//         .skip(skip)
+//         .limit(Number(limit))
+//         .lean(),
+//       ExchangeRateModel.countDocuments(filter),
+//     ]);
+
+//     return responseHelper.success(res, {
+      
+//        records,
+//        total,
+//       page: Number(page),
+//       limit: Number(limit),
+//     },"Ftech latest exhcange result/");
+//   } catch (error: any) {
+//     console.error("getExchangeRates error:", error);
+//     return responseHelper.serverError(res, "Error fetching exchange rate list.");
+//   }
+// };
+
 export const getExchangeRates = async (req: Request, res: Response) => {
   try {
-    const { base_code, limit = 10, page = 1 } = req.query;
-
-    const filter: any = {};
-    if (base_code) {
-      filter.base_code = String(base_code).toUpperCase();
-    }
+    const {
+      limit = 10,
+      page = 1,
+      base_code,
+      target_code,
+      date_from,
+      date_to,
+      min_rate,
+      max_rate,
+    } = req.query;
 
     const skip = (Number(page) - 1) * Number(limit);
 
-    const [records, total] = await Promise.all([
-      ExchangeRateModel.find(filter)
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(Number(limit))
-        .lean(),
-      ExchangeRateModel.countDocuments(filter),
+    // Build a match filter from query params (date range, optional base_code)
+    // We won't hardcode USD or any base here — we'll read distinct bases from DB.
+    const matchFilter: any = {};
+    if (base_code) matchFilter.base_code = String(base_code).toUpperCase();
+    if (date_from || date_to) {
+      matchFilter.createdAt = {};
+      if (date_from) matchFilter.createdAt.$gte = new Date(String(date_from));
+      if (date_to) matchFilter.createdAt.$lte = new Date(String(date_to));
+    }
+
+    // Aggregate latest document per base_code to ensure uniqueness per base
+    const aggregatePipeline: any[] = [
+      { $match: matchFilter },
+      { $sort: { createdAt: -1 } },
+      {
+        $group: {
+          _id: "$base_code",
+          latestRecord: { $first: "$$ROOT" },
+        },
+      },
+      { $replaceRoot: { newRoot: "$latestRecord" } },
+      { $skip: skip },
+      { $limit: Number(limit) },
+    ];
+
+    const countPipeline: any[] = [
+      { $match: matchFilter },
+      { $group: { _id: "$base_code" } },
+      { $count: "total" },
+    ];
+
+    const [records, countResult] = await Promise.all([
+      ExchangeRateModel.aggregate(aggregatePipeline),
+      ExchangeRateModel.aggregate(countPipeline),
     ]);
 
+    const total = Array.isArray(countResult) && countResult.length > 0 ? countResult[0].total : 0;
+
+    // Target currency (default to INR)
+    const target = target_code ? String(target_code).toUpperCase() : "INR";
+
+    // If user requested a target other than INR but the endpoint is intended
+    // for INR-centric results, return empty result set.
+    // (Alternatively we could support any target; adjust if needed.)
+    // For now, we'll honor any target but the transformation below will ensure
+    // each record's conversion_rates contains only a single key: the target.
+
+    // Ensure uniqueness (aggregation already grouped by base_code). Now filter
+    // records to only those that include the target in their conversion_rates
+    const filtered = records
+      .map((rec) => {
+        const base = String(rec.base_code).toUpperCase();
+        if (base === target) return null; // omit the target as a base
+        const rateVal = rec.conversion_rates ? rec.conversion_rates[target] : undefined;
+        const rate = typeof rateVal === "number" ? rateVal : Number(rateVal);
+        if (!isFinite(rate)) return null;
+        if ((min_rate && rate < Number(min_rate)) || (max_rate && rate > Number(max_rate))) return null;
+
+        return {
+          base_code: base,
+          conversion_rates: { [target]: rate },
+          createdAt: rec.createdAt,
+          lastUpdatedAt: rec.lastUpdatedAt,
+          provider: rec.provider,
+        };
+      })
+      .filter(Boolean) as any[];
+
+    if (!filtered.length) {
+      return responseHelper.notFound(res, `No exchange rate data found for target ${target}.`);
+    }
+
     return responseHelper.success(res, {
-      total,
+      total: filtered.length,
       page: Number(page),
       limit: Number(limit),
-      data: records,
-    });
+      filters: { base_code, target_code: target, date_from, date_to, min_rate, max_rate },
+      records: filtered,
+    }, `Fetched exchange rate results for target ${target}.`);
   } catch (error: any) {
     console.error("getExchangeRates error:", error);
-    return responseHelper.serverError(res, "Error fetching exchange rate list.");
+    return responseHelper.serverError(res, "Error fetching INR exchange rate list.");
   }
 };
+
 
 /**
  * @desc Get latest exchange rates in lightweight marquee format
@@ -119,13 +221,23 @@ export const getExchangeRatesMarquee = async (req: Request, res: Response) => {
     const { base_code } = req.query;
     const filter: any = {};
 
+    // Determine which base codes to fetch. If base_code query is provided, use it;
+    // otherwise use the configured BASE_CURRENCY_LIST from env. We'll always
+    // include INR in the fetched set so we can compute reciprocals when needed.
+    let baseCodes: string[] = [];
     if (base_code) {
-      filter.base_code = String(base_code).toUpperCase();
+      baseCodes = [String(base_code).toUpperCase()];
+    } else {
+      const envList = process.env.BASE_CURRENCY_LIST || "";
+      baseCodes = envList.split(",").map((c) => c.trim().toUpperCase()).filter(Boolean);
     }
 
-    // Find the latest record per base currency
+    // ensure INR is present so we can derive reciprocal rates if a base doesn't include INR
+    if (!baseCodes.includes("INR")) baseCodes.push("INR");
+
+    // Aggregate latest record per requested base code
     const records = await ExchangeRateModel.aggregate([
-      { $match: filter },
+      { $match: { base_code: { $in: baseCodes } } },
       { $sort: { createdAt: -1 } },
       {
         $group: {
@@ -139,24 +251,42 @@ export const getExchangeRatesMarquee = async (req: Request, res: Response) => {
       return responseHelper.notFound(res, "No exchange rate data found.");
     }
 
-    // Transform data for a front-end ticker/marquee
-    const marqueeData = records.flatMap((r) => {
-      const base = r._id;
-      const rates = r.latestRecord.conversion_rates;
-      const formattedRates = [];
 
-      // Pick top 10 currencies for visual clarity
-      const topCurrencies = Object.keys(rates).slice(0, 10);
+    // Build a map of base_code -> conversion_rates for quick lookup
+    const recordMap: Record<string, any> = {};
+    for (const r of records) {
+      recordMap[String(r._id).toUpperCase()] = r.latestRecord.conversion_rates || {};
+    }
 
-      for (const target of topCurrencies) {
-        formattedRates.push({
-          pair: `${base}/${target}`,
-          rate: rates[target],
-        });
+    // We want only pairs that involve INR. For each configured base (except INR)
+    // we will produce two entries: BASE/INR (direct) and INR/BASE (reciprocal).
+    const requestedBases = baseCodes.filter((c) => c !== "INR");
+    const marqueeData: Array<{ pair: string; rate: number }> = [];
+
+    for (const base of requestedBases) {
+      const ratesForBase = recordMap[base];
+      const inrRateFromBase = ratesForBase ? ratesForBase["INR"] : undefined;
+
+      if (typeof inrRateFromBase === "number" && isFinite(inrRateFromBase) && inrRateFromBase !== 0) {
+        // base -> INR
+        marqueeData.push({ pair: `${base}/INR`, rate: inrRateFromBase });
+        // INR -> base (reciprocal)
+        marqueeData.push({ pair: `INR/${base}`, rate: 1 / inrRateFromBase });
+        continue;
       }
 
-      return formattedRates;
-    });
+      // If the base record doesn't contain INR, try to use the INR record (if present)
+      const ratesForINR = recordMap["INR"];
+      const rateFromINRToBase = ratesForINR ? ratesForINR[base] : undefined;
+      if (typeof rateFromINRToBase === "number" && isFinite(rateFromINRToBase) && rateFromINRToBase !== 0) {
+        // INR -> base is available; use it directly and derive reciprocal
+        marqueeData.push({ pair: `INR/${base}`, rate: rateFromINRToBase });
+        marqueeData.push({ pair: `${base}/INR`, rate: 1 / rateFromINRToBase });
+        continue;
+      }
+
+      // If neither direct nor inverse rates are available, skip this base
+    }
 
     return responseHelper.success(res, {
       count: marqueeData.length,

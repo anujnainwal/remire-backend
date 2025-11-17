@@ -1,6 +1,6 @@
 import express from "express"
-import { createExchangeRateInternal, getExchangeRatesMarquee } from "../controllers/exchangeRates.controller";
-import { getExchangeRates } from "../controllers/sendMoney.controller";
+import { createExchangeRateInternal, getExchangeRates, getExchangeRatesMarquee } from "../controllers/exchangeRates.controller";
+
 const exchangeRouter = express.Router();
 
 // Order CRUD operations

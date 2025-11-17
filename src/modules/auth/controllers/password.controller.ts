@@ -2,11 +2,7 @@ import { Request, Response } from "express";
 import UserModel from "../../users/models/User.model";
 import jwt from "jsonwebtoken";
 import { responseHelper } from "../../../utils/responseHelper";
-import emailService from "../../../services/third-party/email/nodemailer.service";
-import {
-  resetPasswordTemplate,
-  buildTemplatePayload,
-} from "../../../services/third-party/email/templates";
+
 
 export const forgotPassword = async (req: Request, res: Response) => {
   try {
@@ -24,20 +20,7 @@ export const forgotPassword = async (req: Request, res: Response) => {
     await user.save();
 
     const resetUrl = `${process.env.CLIENT_URL}/reset-password?token=${resetToken}`;
-    const tpl = resetPasswordTemplate({
-      name: user.firstname || user.email,
-      resetUrl,
-      expiresIn: "5 minutes",
-    });
-    const payload = buildTemplatePayload(tpl);
-
-    try {
-      await emailService.sendMail({ to: user.email, ...payload });
-    } catch (err) {
-      // Log but don't leak transport errors to clients
-      console.error("Failed sending reset email", err);
-    }
-
+   
     return responseHelper.success(
       res,
       null,

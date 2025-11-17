@@ -5,6 +5,8 @@ import { autoSeedSuperAdmin } from "./config/autoSeed";
 import socket from "socket.io";
 import { createServer } from "http";
 import jwt from "jsonwebtoken";
+import { sendEmail } from "./services/email.service";
+import VerifyEmailTemplate from "./templates/verifyEmail.template"
 
 dotenv.config();
 
@@ -118,4 +120,17 @@ httpServer.listen(PORT, () => {
   console.log("📎 Base URL:", serverUrl);
   console.log("🩺 Health Check:", healthUrl);
   console.log("===========================================");
+  
 });
+
+async function TestEmail (){
+  try {
+    let template = VerifyEmailTemplate("Anuj","https://remiwire.com/verify-email?token=abcd1234");
+    let result = await sendEmail("anujsinghnainwal@gmail.com", "Test Email from Remiwire",undefined,template);
+    console.log("Email send result:", result?.messageId);
+  } catch (error) {
+    
+  }
+}
+TestEmail()
+

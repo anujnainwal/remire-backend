@@ -126,8 +126,6 @@ const staffSchema: Schema<IStaff> = new Schema(
 // Optimized indexes for better performance
 staffSchema.index({ role: 1, isActive: 1 }); // Compound index for role filtering
 staffSchema.index({ isActive: 1, createdAt: -1 }); // Compound index for active staff sorted by creation
-staffSchema.index({ email: 1 }); // Unique index already exists
-staffSchema.index({ employeeId: 1 }); // Unique index already exists
 staffSchema.index({ createdBy: 1 }); // Index for createdBy queries
 staffSchema.index({ lastLogin: -1 }); // Index for last login sorting
 

@@ -4,9 +4,9 @@ import {
   getSendMoneyOrders,
   getSendMoneyOrder,
   updateSendMoneyOrderStatus,
-  getExchangeRates,
 } from "../controllers/sendMoney.controller";
 import authGuard from "../../../middlewares/auth.middleware";
+import { getExchangeRates } from "../controllers/germanBlockedAccount.controller";
 
 const router = Router();
 
