@@ -26,6 +26,7 @@ import { corsOption } from "./config/corsOptions";
 import { autoSeedSuperAdmin } from "./config/autoSeed";
 import exchangeRouter from "./modules/forex-services/routes/exchange.route";
 import { startCronJobs } from "./cron/scheduler/scheduler";
+import staticRouter from "./modules/static-content/v1/routes/staticRoute.route";
 
 const app = express();
 
@@ -109,6 +110,7 @@ app.use("/api/v1/forex", orderRouter);
 app.use("/api/v1/forex", cartRouter);
 app.use("/api/v1/forex", paymentRouter);
 app.use("/api/v1/rate",exchangeRouter)
+app.use("/api/v1/static",staticRouter)
 app.use("/api/v1", webhookRouter);
 // Contact Routes
 app.use("/api/v1", contactRouter);
