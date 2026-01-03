@@ -1,5 +1,5 @@
 {
-  "name": "orbit-backend-api",
+  "name": "remiwire-backend-api",
   "version": "1.0.0",
   "description": "",
   "homepage": "https://github.com/anujnainwal/orbit-hub-backend#readme",
@@ -17,7 +17,7 @@
   "scripts": {
     "dev": "nodemon",
     "build": "tsc",
-    "start": "node dist/src/server.js",
+    "start": "node dist/server.js",
     "test": "vitest --run",
     "seed:super-admin": "ts-node scripts/seedSuperAdmin.ts",
     "vercel-build": "npm run build",
