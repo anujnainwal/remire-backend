@@ -1,0 +1,77 @@
+import mongoose, { Schema, Document, Model } from "mongoose";
+
+export interface IGicPayment extends Document {
+  user: mongoose.Types.ObjectId;
+  fromCountry: number;
+  fromState: number;
+  fromCity: number;
+  transferTo: string;
+  purpose: string;
+  currency: string;
+  amount: number;
+  total: number;
+  exchangeRate: number;
+  status: "pending" | "processing" | "completed" | "cancelled" | "failed";
+  transactionId?: string;
+  paymentReference?: string;
+  kycStatus: "pending" | "approved" | "rejected";
+  canadianDetails?: {
+    universityName?: string;
+    programOfStudy?: string;
+    intake?: string;
+    expectedDuration?: string;
+    passportNumber?: string;
+    visaType?: string;
+    bankAccountNumber?: string;
+    ifscCode?: string;
+    gicProvider?: string;
+  };
+  complianceDocuments?: {
+    passport?: string;
+    visa?: string;
+    universityAdmissionLetter?: string;
+    bankStatement?: string;
+    gicCertificate?: string;
+    other?: string[];
+  };
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const gicPaymentSchema: Schema<IGicPayment> = new Schema(
+  {
+    user: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    fromCountry: { type: Number, required: true },
+    fromState: { type: Number, required: true },
+    fromCity: { type: Number, required: true },
+    transferTo: { type: String, required: true },
+    purpose: { type: String, required: true },
+    currency: { type: String, required: true },
+    amount: { type: Number, required: true },
+    total: { type: Number, required: true },
+    exchangeRate: { type: Number, required: true },
+    status: {
+      type: String,
+      enum: ["pending", "processing", "completed", "cancelled", "failed"],
+      default: "pending",
+    },
+    transactionId: { type: String, default: null },
+    paymentReference: { type: String, default: null },
+    kycStatus: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "pending",
+    },
+    canadianDetails: { type: Schema.Types.Mixed, default: {} },
+    complianceDocuments: { type: Schema.Types.Mixed, default: {} },
+  },
+  { timestamps: true }
+);
+
+const GicPaymentModel: Model<IGicPayment> = mongoose.model<IGicPayment>(
+  "GicPayment",
+  gicPaymentSchema
+);
+
+export default GicPaymentModel;
+
