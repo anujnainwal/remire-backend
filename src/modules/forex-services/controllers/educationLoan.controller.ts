@@ -77,13 +77,32 @@ export const getEducationLoanRequests = async (
     const userId = req.user && req.user._id;
     if (!userId) return responseHelper.unauthorized(res);
 
-    const requests = await EducationLoanModel.find({ user: userId })
-      .sort({ createdAt: -1 })
-      .populate("user", "email firstName lastName");
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const skip = (page - 1) * limit;
+
+    const [requests, total] = await Promise.all([
+      EducationLoanModel.find({ user: userId })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate("user", "email firstName lastName"),
+      EducationLoanModel.countDocuments({ user: userId }),
+    ]);
+
+    const totalPages = Math.ceil(total / limit);
 
     return responseHelper.success(
       res,
-      requests,
+      {
+        data: requests,
+        pagination: {
+          total,
+          page,
+          limit,
+          totalPages,
+        },
+      },
       "Education loan requests fetched successfully"
     );
   } catch (err) {
@@ -197,3 +216,35 @@ export const updateEducationLoanDocuments = async (
   }
 };
 
+export const deleteEducationLoanRequest = async (
+  req: AuthRequest,
+  res: Response
+) => {
+  try {
+    const userId = req.user && req.user._id;
+    if (!userId) return responseHelper.unauthorized(res);
+
+    const { id } = req.params;
+
+    const request = await EducationLoanModel.findOneAndDelete({
+      _id: id,
+      user: userId,
+    });
+
+    if (!request) {
+      return responseHelper.notFound(res, "Education loan request not found");
+    }
+
+    return responseHelper.success(
+      res,
+      null,
+      "Education loan request deleted successfully"
+    );
+  } catch (err) {
+    console.error("Error deleting education loan request:", err);
+    return responseHelper.serverError(
+      res,
+      "Failed to delete education loan request"
+    );
+  }
+};

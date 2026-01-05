@@ -5,7 +5,11 @@ import {
   fetchAllStaticContentByType,
   updateStaticContent,
 } from "../controllers";
+import faqRouter from "./faq.routes";
+
 const staticRouter = express.Router();
+
+staticRouter.use("/faq", faqRouter);
 
 // staticRouter.post("/", createStaticContent);
 staticRouter.get("/all", fetchAllStaticContentByType);

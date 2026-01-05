@@ -5,6 +5,7 @@ import {
   getEducationLoanRequest,
   updateEducationLoanRequestStatus,
   updateEducationLoanDocuments,
+  deleteEducationLoanRequest,
 } from "../controllers/educationLoan.controller";
 import authGuard from "../../../middlewares/auth.middleware";
 
@@ -16,6 +17,7 @@ router.get("/education-loan", getEducationLoanRequests);
 router.get("/education-loan/:id", getEducationLoanRequest);
 router.patch("/education-loan/:id", updateEducationLoanRequestStatus);
 router.patch("/education-loan/:id/documents", updateEducationLoanDocuments);
+router.delete("/education-loan/:id", deleteEducationLoanRequest);
 
 export default router;
 
